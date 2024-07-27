@@ -100,33 +100,49 @@ open('listB.1'); // TypeError. Because listB only has one element.
 
 
 
-export type TailPath<T, Options extends Required<PathsOptions> = {maxRecursionDepth: 50}, Prefix extends string = never, Acc extends string = never> =
-	BreakRecursion<T, Options> extends false
-		? TailPath_<T, Options, Prefix, Acc>
-		: Acc
+export type TailPath<T, Options extends Required<PathsOptions> = {maxRecursionDepth: 50}, Prefix extends string | number = never, Acc extends string | number = never> =
+	T extends T
+		? ShouldBreakRecursion<T, Options> extends true
+			? Acc
+			: TailPath_<T, Options, Prefix, Acc>
+		: never;
 
 type TailPath_<
 	T_,
 	Options extends Required<PathsOptions>,
-	Prefix extends string,
-	Acc extends string,
+	Prefix extends string | number,
+	Acc extends string | number,
 	T = PrepareInput<T_>,
-	Key extends keyof T & (number | string) = { [Key in keyof T]: Key}[T extends UnknownArray ? keyof T & number : keyof T & (number | string)]
+	Key extends keyof T & (string | number) = { [Key in keyof T]: Key}[T extends UnknownArray ? keyof T & number : keyof T & (number | string)],
+	TupleIndex extends string = never,
+	
 > =
-	Key extends Key
-		? TailPath<
-			T[Key],
-			{maxRecursionDepth: Subtract<Options['maxRecursionDepth'], 1>},
-			 `${IfNever<Prefix, '', `${Prefix}.`>}${Key}`,
-			Acc | `${IfNever<Prefix, '', `${Prefix}.`>}${Key}`
-		>
-		: never;
+	IsNever<Key> extends true
+		? Acc
+		: Key extends Key
+			? IfNever<Prefix, Key | `${Key}`, `${Prefix}.${Key}`> extends infer NewPrefix extends string | number
+				? TailPath<
+					T[Key],
+					{maxRecursionDepth: Subtract<Options['maxRecursionDepth'], 1>},
+					NewPrefix,
+					Acc | NewPrefix
+				>
+				: never
+			: never;
 
 
+type x30 = { [Key in keyof {}]: Key}[{} extends UnknownArray ? keyof {} & number : keyof {} & (number | string)]
+type x10 = TailPath<Record<1, unknown>>
+type x20 =TailPath<
+	unknown,
+	{maxRecursionDepth: 10},
+	1 | '1',
+	1 | '1'
+>
 type RecFoo = {foo: RecFoo}
 type x1 = TailPath<RecFoo, {maxRecursionDepth: 200}>
 type ABC = {a: {b: {c: string}}}
-type x2 = TailPath<DeepObject>;
+type x2 = TailPath<DeepObject, {maxRecursionDepth: 100}>;
 type DeepObject = {
 	a: {
 		b: {
@@ -134,7 +150,7 @@ type DeepObject = {
 				d: string;
 			};
 		};
-		b2: number;
+		b2: DeepObject;
 		b3: boolean;
 	};
 };
@@ -143,7 +159,7 @@ type x3 = TailPath<DeepObject[keyof DeepObject], {maxRecursionDepth: 20}, `${Str
 type x4 = TailPath<DeepObject['a'][keyof DeepObject['a']], {maxRecursionDepth: 20}, `${StringKeyOf<DeepObject['a']>}`>
 
 
-type BreakRecursion<T, Options extends Required<PathsOptions>> =
+type ShouldBreakRecursion<T, Options extends Required<PathsOptions>> =
 	IsNeverOrAny<T> extends true
 		? true
 		: 0 extends Options['maxRecursionDepth']
@@ -159,3 +175,11 @@ type PrepareInput<T> =
 			? StaticPartOfArray<T> | VariablePartOfArray<T>
 			: Required<T>
 		: Required<T>;
+
+
+type ToArray<T>= T extends T ? T[] : never
+type arr = ToArray<1 | 2 | (number & {})>
+type arrX = 1[] | 2[] | number[]
+
+type DistributeToString<T extends string | number> = 1
+type Test = DistributeToString<1 | 2 | number>
