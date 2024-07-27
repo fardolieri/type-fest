@@ -43,6 +43,9 @@ expectType<'foo'>(date);
 declare const mixed: Paths<{foo: boolean} | {bar: string}>;
 expectType<'foo' | 'bar'>(mixed);
 
+declare const mixed2: Paths<{foo: {mep: string | {bar: string}}} | {bar: string | {baz: number | {boo: string}}}>;
+expectType<'foo' | 'foo.mep' | 'foo.mep.bar' | 'bar' | 'bar.baz' | 'bar.baz.boo'>(mixed2);
+
 declare const array: Paths<Array<{foo: string}>>;
 expectType<number | `${number}` | `${number}.foo`>(array);
 
@@ -111,13 +114,13 @@ expectAssignable<string>({} as MyEntityPaths);
 
 // By default, the recursion limit should be reasonably long
 type RecursiveFoo = {foo: RecursiveFoo};
-expectAssignable<Paths<RecursiveFoo>>('foo.foo.foo.foo.foo.foo.foo.foo');
+expectAssignable<Paths<RecursiveFoo, {maxRecursionDepth: 29}>>('foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo.foo');
 
-declare const recursion0: Paths<RecursiveFoo, {maxDepth: 0}>;
+declare const recursion0: Paths<RecursiveFoo, {maxRecursionDepth: 0}>;
 expectType<never>(recursion0);
 
-declare const recursion1: Paths<RecursiveFoo, {maxDepth: 1}>;
+declare const recursion1: Paths<RecursiveFoo, {maxRecursionDepth: 1}>;
 expectType<'foo'>(recursion1);
 
-declare const recursion2: Paths<RecursiveFoo, {maxDepth: 2}>;
+declare const recursion2: Paths<RecursiveFoo, {maxRecursionDepth: 2}>;
 expectType<'foo' | 'foo.foo'>(recursion2);

@@ -14,7 +14,7 @@ export type PathsOptions = {
 
 	@default 10
 	*/
-	maxDepth?: number;
+	maxRecursionDepth?: number;
 };
 
 /**
@@ -59,26 +59,27 @@ open('listB.1'); // TypeError. Because listB only has one element.
 @category Array
 */
 export type Paths<T, Options extends PathsOptions = {}> =
-	(Options['maxDepth'] extends number ? Options['maxDepth'] : 10) extends infer MaxDepth extends number
-		? Paths_<T, {maxDepth: MaxDepth}>
+	(Options['maxRecursionDepth'] extends number ? Options['maxRecursionDepth'] : 10) extends infer MaxDepth extends number
+		? T extends T
+			? Paths_<T, {maxRecursionDepth: MaxDepth}>
+			: never
 		: never;
 
-type Paths_<T, Options extends Required<PathsOptions>> =
-	0 extends Options['maxDepth'] // Limit depth to prevent infinite recursion
+type Paths_<T, Options extends Required<PathsOptions>> = InternalPaths<PrepareInput<T, Options>, Options>;
+
+type PrepareInput<T, Options extends Required<PathsOptions>> =
+	0 extends Options['maxRecursionDepth'] // Limit depth to prevent infinite recursion
 		? never
 		: T extends NonRecursiveType | ReadonlyMap<unknown, unknown> | ReadonlySet<unknown>
 			? never
 			: IsAny<T> extends true
 				? never
-				: (T extends UnknownArray
+				: T extends UnknownArray
 					? number extends T['length']
 						// We need to handle the fixed and non-fixed index part of the array separately.
 						? StaticPartOfArray<T> | VariablePartOfArray<T>
-						: T
-					: T
-				) extends infer NewT
-					? InternalPaths<Required<NewT>, Options>
-					: never;
+						: Required<T>
+					: Required<T>;
 
 type InternalPaths<T, Options extends Required<PathsOptions>> = {
 	[Key in keyof T]:
@@ -86,7 +87,7 @@ type InternalPaths<T, Options extends Required<PathsOptions>> = {
 		| Key
 		| ToString<Key>
 		| (
-			Paths_<T[Key], {maxDepth: Subtract<Options['maxDepth'], 1>}> extends infer NewPaths extends string | number
+			Paths_<T[Key], {maxRecursionDepth: Subtract<Options['maxRecursionDepth'], 1>}> extends infer NewPaths extends string | number
 				? `${Key & (string | number)}.${NewPaths}`
 				: never
 		)
