@@ -1,5 +1,6 @@
 import {expectAssignable, expectType} from 'tsd';
-import type {Paths} from '../index';
+import { TailPath as Paths } from '../source/paths';
+
 
 declare const normal: Paths<{foo: string}>;
 expectType<'foo'>(normal);
